@@ -1,13 +1,10 @@
 // Get the selected text when popup opens
 function setSelectedText() {
-  // First check if there's text from context menu
   chrome.storage.local.get(['contextMenuSelection'], function(result) {
     if (result.contextMenuSelection) {
       document.getElementById('selectedText').value = result.contextMenuSelection;
-      // Clear the stored text
       chrome.storage.local.remove('contextMenuSelection');
     } else {
-      // If no context menu text, try getting from current tab
       chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
         chrome.tabs.sendMessage(tabs[0].id, {action: "getSelectedText"}, function(response) {
           if (response && response.text) {
@@ -38,9 +35,8 @@ function saveResults(result, sources) {
 function loadSavedResults() {
   chrome.storage.local.get(['lastResearch'], function(data) {
     if (data.lastResearch) {
-      const resultHtml = marked.parse(data.lastResearch.result || '');
-      document.getElementById('researchResult').innerHTML = resultHtml;
-      
+      // Display plain text instead of markdown
+      document.getElementById('researchResult').innerHTML = data.lastResearch.result || '';
       document.getElementById('sources').value = data.lastResearch.sources || '';
       document.getElementById('resultSection').style.display = 'block';
       
@@ -50,14 +46,6 @@ function loadSavedResults() {
     }
   });
 }
-
-// Load saved results when popup opens
-loadSavedResults();
-
-// Function to check research status
-// function checkResearchStatus() { ... }
-// Start checking status when popup opens
-// checkResearchStatus();
 
 // Update the research button click handler
 document.getElementById('researchButton').addEventListener('click', function() {
@@ -77,26 +65,21 @@ document.getElementById('researchButton').addEventListener('click', function() {
     
     // Simulate processing with dummy content
     setTimeout(() => {
-      const dummyContent = `
-### Research Summary
+      const dummyContent = `Research Summary
 
 Here is a summary of the analyzed text:
 
-- **Key Point 1:** This is an important finding from the text
-- **Key Point 2:** Another significant observation
-- **Key Point 3:** A final noteworthy point
+- Key Point 1: This is an important finding from the text
+- Key Point 2: Another significant observation
+- Key Point 3: A final noteworthy point
 
 This analysis provides a comprehensive overview of the selected content.`;
 
-      const dummySources = `
-[Source 1](https://example.com/source1)
-[Source 2](https://example.com/source2)`;
+      const dummySources = `Source 1: https://example.com/source1
+Source 2: https://example.com/source2`;
 
-      // Convert markdown to HTML
-      const resultHtml = marked.parse(dummyContent);
-
-      // Display results
-      document.getElementById('researchResult').innerHTML = resultHtml;
+      // Display results as plain text
+      document.getElementById('researchResult').innerHTML = dummyContent;
       document.getElementById('sources').value = dummySources;
       resultSection.style.display = 'block';
       
