@@ -12,4 +12,9 @@ router.post('/research', async (req, res, next) => {
   }
 });
 
+// Define the /api/status route
+router.get('/status', (req, res) => {
+    res.status(200).json({ message: 'API is running' });
+});
+
 module.exports = router; 
