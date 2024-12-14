@@ -1,4 +1,4 @@
-import { researchTopic } from './perplexityResearch.js';
+import ApiService from './services/api.js';
 // No import for marked.js since it's included in popup.html
 
 // Get the selected text when popup opens
@@ -190,10 +190,15 @@ document.getElementById('researchButton').addEventListener('click', async functi
     statusDiv.textContent = 'Recherche läuft...';
     resultSection.style.display = 'none';
     
-    const sourceUrl = 'https://example.com'; // Replace with the actual URL
-
     try {
-      const apiResponse = await researchTopic(text, sourceUrl);
+      // Get current tab URL for sourceUrl
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      const sourceUrl = tab.url;
+
+      // Use the API service instead of direct Perplexity call
+      const apiResponse = await ApiService.research(text, sourceUrl);
+      
+      // Rest of the handling remains the same
       const resultContent = apiResponse.choices[0].message.content || 'Keine Ergebnisse gefunden';
       
       // Save to history and persist current research
