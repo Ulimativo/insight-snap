@@ -352,3 +352,81 @@
     font-size: 13px;
     font-style: italic;
   }
+
+  .history-section {
+    margin-bottom: 20px;
+    padding: 10px;
+    background-color: var(--bg);
+    border-radius: 8px;
+  }
+
+  .history-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+
+  .history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .history-item {
+    padding: 8px;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .history-item:hover {
+    background-color: var(--primary);
+    color: white;
+  }
+
+  .history-item .timestamp {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .history-item:hover .timestamp {
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  .secondary-button.small {
+    padding: 4px 8px;
+    font-size: 12px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .secondary-button.small .button-icon {
+    font-size: 14px;
+  }
+
+  .footer {
+    margin-top: 20px;
+    padding: 10px;
+    background-color: var(--surface);
+    border-top: 1px solid var(--border);
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .footer-link {
+    color: var(--primary);
+    text-decoration: none;
+  }
+
+  .footer-link:hover {
+    text-decoration: underline;
+  }

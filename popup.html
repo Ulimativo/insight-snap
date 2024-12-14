@@ -11,6 +11,17 @@
   <div class="container">
     <img src="images/InsightSnap.png" alt="InsightSnap Logo" class="logo">
     <p>InsightSnap liefert sekundenschnelle, präzise Recherchen direkt im Browser – inklusive verifizierter Quellen, ohne den Workflow zu unterbrechen.</p>
+    
+    <div class="history-section" id="historySection">
+      <div class="history-label">
+        Letzte Recherchen
+        <button class="secondary-button small" id="downloadHistory">
+          Historie speichern <span class="button-icon">📥</span>
+        </button>
+      </div>
+      <div id="historyList" class="history-list"></div>
+    </div>
+
     <textarea 
       id="selectedText" 
       placeholder="Selected text will appear here..."
@@ -42,10 +53,20 @@
 
       <div class="button-row">
         <button class="secondary-button" id="clearResults">
-          Lösche Felder
+          Lösche Felder (+ Historie!)
+        </button>
+        <button class="secondary-button" id="downloadResults">
+          Ergebnisse speichern
         </button>
       </div>
     </div>
+  </div>
+  <div class="footer">
+    <p>&copy; 2024 InsightSnap. Alle Rechte vorbehalten.</p>
+    <p>
+      Besuche uns auf 
+      <a href="https://ulrichraab.eu" target="_blank" class="footer-link">ulrichraab.eu</a>
+    </p>
   </div>
   <script src="popup.js"></script>
 </body>

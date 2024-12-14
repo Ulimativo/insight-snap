@@ -75,6 +75,105 @@ function simpleMarkdownToHtml(markdown) {
   return html;
 }
 
+// Add this function to handle downloading the results
+function downloadResults(filename, content) {
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url); // Clean up
+}
+
+// Function to save research to history
+function saveToHistory(content, citations) {
+  chrome.storage.local.get(['researchHistory'], function(data) {
+    let history = data.researchHistory || [];
+    
+    // Add new research to the beginning of the array
+    history.unshift({
+      content: content,
+      citations: citations,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Keep only the last 3 items
+    history = history.slice(0, 3);
+    
+    // Save updated history
+    chrome.storage.local.set({
+      'researchHistory': history,
+      'currentResearch': {
+        content: content,
+        citations: citations
+      }
+    });
+    
+    // Update the UI
+    displayHistory(history);
+  });
+}
+
+// Function to display history
+function displayHistory(history) {
+  const historyList = document.getElementById('historyList');
+  historyList.innerHTML = '';
+  
+  history.forEach((item, index) => {
+    const date = new Date(item.timestamp);
+    const formattedDate = date.toLocaleString('de-DE');
+    
+    const historyItem = document.createElement('div');
+    historyItem.className = 'history-item';
+    historyItem.innerHTML = `
+      <div class="timestamp">${formattedDate}</div>
+      <div class="preview">${item.content.substring(0, 100)}...</div>
+    `;
+    
+    historyItem.addEventListener('click', () => loadResearch(item));
+    historyList.appendChild(historyItem);
+  });
+}
+
+// Function to load a research item
+function loadResearch(research) {
+  const resultHtml = simpleMarkdownToHtml(research.content);
+  document.getElementById('researchResult').innerHTML = resultHtml;
+  
+  // Display citations if they exist
+  if (research.citations && research.citations.length > 0) {
+    const citationsHtml = research.citations
+      .map(citation => {
+        try {
+          const hostname = new URL(citation).hostname;
+          return `<a href="${citation}" target="_blank" class="citation-link">${hostname}</a>`;
+        } catch (error) {
+          return `<a href="${citation}" target="_blank" class="citation-link">${citation}</a>`;
+        }
+      })
+      .join('');
+    document.getElementById('citationLinks').innerHTML = citationsHtml;
+  }
+  
+  document.getElementById('resultSection').style.display = 'block';
+  window.lastResearchResult = research.content;
+}
+
+// Load current research and history when popup opens
+document.addEventListener('DOMContentLoaded', function() {
+  chrome.storage.local.get(['currentResearch', 'researchHistory'], function(data) {
+    if (data.currentResearch) {
+      loadResearch(data.currentResearch);
+    }
+    if (data.researchHistory) {
+      displayHistory(data.researchHistory);
+    }
+  });
+});
+
 // Update the research button click handler
 document.getElementById('researchButton').addEventListener('click', async function() {
   const button = this;
@@ -96,6 +195,9 @@ document.getElementById('researchButton').addEventListener('click', async functi
     try {
       const apiResponse = await researchTopic(text, sourceUrl);
       const resultContent = apiResponse.choices[0].message.content || 'Keine Ergebnisse gefunden';
+      
+      // Save to history and persist current research
+      saveToHistory(resultContent, apiResponse.citations || []);
       
       // Convert markdown to HTML for the entire content
       const resultHtml = simpleMarkdownToHtml(resultContent);
@@ -130,6 +232,9 @@ document.getElementById('researchButton').addEventListener('click', async functi
       // Save results
       saveResults(resultContent, '');
       
+      // Store the result content for download
+      window.lastResearchResult = resultContent; // Store the result for later use
+      
     } catch (error) {
       console.error('Fehler bei der Recherche:', error);
       statusDiv.textContent = 'Fehler bei der Recherche.';
@@ -160,12 +265,55 @@ document.getElementById('copyResult').addEventListener('click', function() {
   });
 });
 
-// Add clear button handler
+// Update the clear button handler
 document.getElementById('clearResults').addEventListener('click', function() {
-  chrome.storage.local.remove(['lastResearch'], function() {
+  chrome.storage.local.remove(['currentResearch', 'researchHistory'], function() {
     document.getElementById('researchResult').innerHTML = '';
-    document.getElementById('sources').value = '';
+    document.getElementById('citationLinks').innerHTML = '';
+    document.getElementById('historyList').innerHTML = '';
     document.getElementById('resultSection').style.display = 'none';
     document.getElementById('status').textContent = '';
+  });
+});
+
+// Add event listener for the download button
+document.getElementById('downloadResults').addEventListener('click', function() {
+  if (window.lastResearchResult) {
+    const timestamp = new Date().toISOString().split('T')[0];
+    downloadResults(`InsightSnap_Recherche_${timestamp}.txt`, window.lastResearchResult);
+  } else {
+    alert('Keine Ergebnisse zum Speichern vorhanden.');
+  }
+});
+
+// Function to format research history for download
+function formatHistoryForDownload(history) {
+  return history.map((item, index) => {
+    const date = new Date(item.timestamp);
+    const formattedDate = date.toLocaleString('de-DE');
+    
+    return `
+=== Recherche vom ${formattedDate} ===
+
+${item.content}
+
+Quellen:
+${item.citations ? item.citations.join('\n') : 'Keine Quellen verfügbar'}
+
+${'-'.repeat(50)}
+`;
+  }).join('\n\n');
+}
+
+// Add event listener for the download history button
+document.getElementById('downloadHistory').addEventListener('click', function() {
+  chrome.storage.local.get(['researchHistory'], function(data) {
+    if (data.researchHistory && data.researchHistory.length > 0) {
+      const formattedHistory = formatHistoryForDownload(data.researchHistory);
+      const timestamp = new Date().toISOString().split('T')[0]; // Get current date YYYY-MM-DD
+      downloadResults(`InsightSnap_Historie_${timestamp}.txt`, formattedHistory);
+    } else {
+      alert('Keine Recherchen in der Historie vorhanden.');
+    }
   });
 }); 
