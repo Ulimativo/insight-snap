@@ -1,8 +1,68 @@
 import ApiService from './services/api.js';
 // No import for marked.js since it's included in popup.html
 
+// Add this function at the top level to check usage limit
+async function checkUsageLimit() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['usageCount'], function(data) {
+      const currentCount = data.usageCount || 0;
+      const maxUses = 5;
+      resolve(currentCount < maxUses ? {
+        allowed: true,
+        remaining: maxUses - currentCount
+      } : {
+        allowed: false,
+        remaining: 0
+      });
+    });
+  });
+}
+
+// Add this function to increment usage count
+function incrementUsageCount() {
+  chrome.storage.local.get(['usageCount'], function(data) {
+    const newCount = (data.usageCount || 0) + 1;
+    chrome.storage.local.set({ usageCount: newCount });
+  });
+}
+
+// Add this function at the top level
+async function checkApiStatus() {
+  try {
+    const response = await fetch('https://is-api.raabcloud.eu/api/Status');
+    const data = await response.json();
+    return data.message === "API is running";
+  } catch (error) {
+    console.error('Error checking API status:', error);
+    return false;
+  }
+}
+
+// Add this function to update the status indicator
+function updateApiStatusIndicator(isOnline) {
+  const statusDiv = document.getElementById('status');
+  const indicator = document.createElement('span');
+  indicator.className = 'api-status-indicator';
+  indicator.style.cssText = `
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-left: 8px;
+    background-color: ${isOnline ? '#4CAF50' : '#F44336'};
+  `;
+  
+  // Remove any existing indicator
+  const existingIndicator = statusDiv.querySelector('.api-status-indicator');
+  if (existingIndicator) {
+    existingIndicator.remove();
+  }
+  
+  statusDiv.appendChild(indicator);
+}
+
 // Wrap your initialization code in DOMContentLoaded
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
   // Initialize event listeners
   initializeEventListeners();
   // Load initial data
@@ -18,6 +78,22 @@ document.addEventListener('DOMContentLoaded', function() {
       displayHistory(data.researchHistory);
     }
   });
+
+  // Check API status
+  const isApiOnline = await checkApiStatus();
+  updateApiStatusIndicator(isApiOnline);
+
+  // Check and display remaining uses
+  const usage = await checkUsageLimit();
+  const statusDiv = document.getElementById('status');
+  if (!usage.allowed) {
+    statusDiv.textContent = 'Leider hast du deine kostenlosen Tests verbraucht.';
+    const button = document.getElementById('researchButton');
+    button.disabled = true;
+    button.innerHTML = 'Limit erreicht ⚠️';
+  } else {
+    statusDiv.textContent = `${usage.remaining} kostenlose Recherchen übrig`;
+  }
 });
 
 // Get the selected text when popup opens
@@ -113,14 +189,51 @@ function saveResults(result, sources) {
 function loadSavedResults() {
   chrome.storage.local.get(['lastResearch'], function(data) {
     if (data.lastResearch) {
-      // Display plain text instead of markdown
-      document.getElementById('researchResult').innerHTML = data.lastResearch.result || '';
-      document.getElementById('sources').value = data.lastResearch.sources || '';
-      document.getElementById('resultSection').style.display = 'block';
+      const resultElement = document.getElementById('researchResult');
+      const resultSection = document.getElementById('resultSection');
+      const citationLinks = document.getElementById('citationLinks');
       
-      const timestamp = new Date(data.lastResearch.timestamp);
-      document.getElementById('status').textContent = 
-        `Letzte Recherche: ${timestamp.toLocaleString()}`;
+      if (resultElement && resultSection && citationLinks) {
+        // Display result
+        resultElement.innerHTML = data.lastResearch.result || '';
+        
+        // Handle sources/citations
+        if (data.lastResearch.sources) {
+          try {
+            const sources = Array.isArray(data.lastResearch.sources) 
+              ? data.lastResearch.sources 
+              : [data.lastResearch.sources];
+            
+            const citationsHtml = sources
+              .map(citation => {
+                try {
+                  const hostname = new URL(citation).hostname;
+                  return `<a href="${citation}" target="_blank" class="citation-link">${hostname}</a>`;
+                } catch (error) {
+                  return `<a href="${citation}" target="_blank" class="citation-link">${citation}</a>`;
+                }
+              })
+              .join('');
+            
+            citationLinks.innerHTML = citationsHtml || '<span class="no-citations">Keine Quellen verfügbar</span>';
+          } catch (error) {
+            console.error('Error handling sources:', error);
+            citationLinks.innerHTML = '<span class="no-citations">Keine Quellen verfügbar</span>';
+          }
+        } else {
+          citationLinks.innerHTML = '<span class="no-citations">Keine Quellen verfügbar</span>';
+        }
+        
+        // Show the result section
+        resultSection.style.display = 'block';
+        
+        // Update timestamp if status element exists
+        const statusElement = document.getElementById('status');
+        if (statusElement && data.lastResearch.timestamp) {
+          const timestamp = new Date(data.lastResearch.timestamp);
+          statusElement.textContent = `Letzte Recherche: ${timestamp.toLocaleString()}`;
+        }
+      }
     }
   });
 }
@@ -387,9 +500,107 @@ document.getElementById('downloadHistory').addEventListener('click', function() 
 }); 
 
 // Add these handler functions at the top level
-function handleResearchClick() {
-  // Move the research button click handler code here
-  // Copy the content from the existing click handler
+async function handleResearchClick() {
+  const button = document.getElementById('researchButton');
+  const statusDiv = document.getElementById('status');
+  const resultSection = document.getElementById('resultSection');
+  const text = document.getElementById('selectedText').value.trim();
+  
+  if (!text) {
+    statusDiv.textContent = 'Bitte geben Sie Text ein, um zu recherchieren';
+    setTimeout(() => statusDiv.textContent = '', 2000);
+    return;
+  }
+
+  // Check API status before proceeding
+  const isApiOnline = await checkApiStatus();
+  if (!isApiOnline) {
+    statusDiv.textContent = 'API ist derzeit nicht verfügbar';
+    updateApiStatusIndicator(false);
+    return;
+  }
+  updateApiStatusIndicator(true);
+
+  // Check usage limit before proceeding
+  const usage = await checkUsageLimit();
+  if (!usage.allowed) {
+    statusDiv.textContent = 'Leider hast du deine kostenlosen Tests verbraucht.';
+    button.disabled = true;
+    button.innerHTML = 'Limit erreicht ⚠️';
+    return;
+  }
+
+  console.log('Textauswahl für Recherche:', text);
+  
+  // Show loading state
+  button.disabled = true;
+  button.innerHTML = 'Recherchiere... ⌛';
+  statusDiv.textContent = `Recherche läuft... (${usage.remaining} Recherchen übrig)`;
+  resultSection.style.display = 'none';
+  
+  try {
+    // Get current tab URL for sourceUrl
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const sourceUrl = tab.url;
+
+    // Use the API service instead of direct Perplexity call
+    const apiResponse = await ApiService.research(text, sourceUrl);
+    
+    // Increment usage count after successful research
+    incrementUsageCount();
+    
+    // Rest of the handling remains the same
+    const resultContent = apiResponse.choices[0].message.content || 'Keine Ergebnisse gefunden';
+    
+    // Save to history and persist current research
+    saveToHistory(resultContent, apiResponse.citations || []);
+    
+    // Convert markdown to HTML for the entire content
+    const resultHtml = simpleMarkdownToHtml(resultContent);
+
+    // Display main results
+    document.getElementById('researchResult').innerHTML = resultHtml;
+    
+    // Handle citations if they exist
+    if (apiResponse.citations && apiResponse.citations.length > 0) {
+      const citationsHtml = apiResponse.citations
+        .map(citation => {
+          try {
+            const hostname = new URL(citation).hostname;
+            return `<a href="${citation}" target="_blank" class="citation-link">${hostname}</a>`;
+          } catch (error) {
+            return `<a href="${citation}" target="_blank" class="citation-link">${citation}</a>`;
+          }
+        })
+        .join('');
+      document.getElementById('citationLinks').innerHTML = citationsHtml;
+    } else {
+      document.getElementById('citationLinks').innerHTML = '<span class="no-citations">Keine Quellen verfügbar</span>';
+    }
+
+    resultSection.style.display = 'block';
+    
+    // Update status with remaining uses
+    const updatedUsage = await checkUsageLimit();
+    statusDiv.textContent = `Recherche abgeschlossen! (${updatedUsage.remaining} Recherchen übrig)`;
+    button.innerHTML = 'Gesendet! ✅';
+    
+    // Save results
+    saveResults(resultContent, '');
+    
+    // Store the result content for download
+    window.lastResearchResult = resultContent;
+    
+  } catch (error) {
+    console.error('Fehler bei der Recherche:', error);
+    statusDiv.textContent = 'Fehler bei der Recherche.';
+  } finally {
+    // Reset button after delay
+    setTimeout(() => {
+      button.disabled = false;
+      button.innerHTML = `Recherchiere <span class="button-icon">🔬</span>`;
+    }, 2000);
+  }
 }
 
 function handleCopyClick() {
