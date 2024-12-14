@@ -1,4 +1,3 @@
-
 :root {
     --primary: #6366f1;
     --primary-dark: #4f46e5;
@@ -237,7 +236,7 @@
 
   .result-content {
     width: 100%;
-    min-height: 200px;
+    min-height: 600px;
     padding: 12px;
     margin-bottom: 15px;
     background-color: var(--bg);
@@ -246,48 +245,64 @@
     font-size: 14px;
     line-height: 1.5;
     overflow-y: auto;
+    white-space: normal;
   }
 
-  .markdown-content h3 {
-    margin-top: 0;
-    margin-bottom: 16px;
-    font-size: 16px;
+  .result-content h1,
+  .result-content h2,
+  .result-content h3 {
+    margin-top: 1em;
+    margin-bottom: 0.5em;
     font-weight: 600;
     color: var(--text);
   }
 
-  .markdown-content p {
-    margin: 0 0 12px 0;
-    color: var(--text);
+  .result-content h1 { font-size: 1.5em; }
+  .result-content h2 { font-size: 1.3em; }
+  .result-content h3 { font-size: 1.1em; }
+
+  .result-content p {
+    margin-bottom: 1em;
+    line-height: 1.6;
   }
 
-  .markdown-content ul {
-    margin: 0 0 12px 0;
-    padding-left: 20px;
-    color: var(--text);
+  .result-content ul {
+    margin-bottom: 1em;
+    padding-left: 2em;
+    list-style-type: disc;
   }
 
-  .markdown-content li {
-    margin-bottom: 8px;
+  .result-content li {
+    margin-bottom: 0.5em;
   }
 
-  .markdown-content strong {
-    color: var(--text);
+  .result-content strong {
     font-weight: 600;
+    color: var(--text);
   }
 
-  #researchResult {
-    width: 100%;
-    min-height: 600px;
-    padding: 12px;
-    box-sizing: border-box;
-    border: 2px solid var(--border);
-    border-radius: 12px;
-    font-size: 14px;
-    line-height: 1.5;
-    font-family: inherit;
-    color: var(--text);
-    background-color: var(--bg);
-    margin-bottom: 15px;
-    resize: vertical;
+  .result-content em {
+    font-style: italic;
+  }
+
+  .result-content blockquote {
+    margin: 1em 0;
+    padding-left: 1em;
+    border-left: 4px solid var(--border);
+    color: var(--text-secondary);
+  }
+
+  .result-content code {
+    padding: 0.2em 0.4em;
+    background-color: var(--surface);
+    border-radius: 3px;
+    font-family: monospace;
+  }
+
+  .result-content pre {
+    margin: 1em 0;
+    padding: 1em;
+    background-color: var(--surface);
+    border-radius: 6px;
+    overflow-x: auto;
   }

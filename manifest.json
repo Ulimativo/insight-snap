@@ -1,12 +1,18 @@
 {
   "manifest_version": 3,
-  "name": "Research Helper",
+  "name": "InsightSnap",
   "version": "1.0",
-  "description": "Send selected text to a research webhook",
+  "icons": {
+    "16": "images/icon.png",
+    "48": "images/icon.png",
+    "128": "images/icon.png"
+  },
+  "description": "InsightSnap liefert sekundenschnelle, präzise Recherchen direkt im Browser – inklusive verifizierter Quellen, ohne den Workflow zu unterbrechen.",
   "permissions": [
     "contextMenus",
     "activeTab",
-    "storage"
+    "storage",
+    "scripting"
   ],
   "action": {
     "default_popup": "popup.html"

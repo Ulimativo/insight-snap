@@ -1,3 +1,6 @@
+import { researchTopic } from './perplexityResearch.js';
+// No import for marked.js since it's included in popup.html
+
 // Get the selected text when popup opens
 function setSelectedText() {
   chrome.storage.local.get(['contextMenuSelection'], function(result) {
@@ -42,63 +45,97 @@ function loadSavedResults() {
       
       const timestamp = new Date(data.lastResearch.timestamp);
       document.getElementById('status').textContent = 
-        `Last research: ${timestamp.toLocaleString()}`;
+        `Letzte Recherche: ${timestamp.toLocaleString()}`;
     }
   });
 }
 
+// Add this function to your popup.js
+function simpleMarkdownToHtml(markdown) {
+  if (!markdown) return '';
+  
+  // Handle headers
+  let html = markdown.replace(/^### (.*$)/gm, '<h3>$1</h3>');
+  html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+  html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+  
+  // Handle bold
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  
+  // Handle italics
+  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  
+  // Handle lists
+  html = html.replace(/^\- (.*$)/gm, '<li>$1</li>');
+  html = html.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
+  
+  // Handle line breaks
+  html = html.replace(/\n/g, '<br>');
+  
+  return html;
+}
+
 // Update the research button click handler
-document.getElementById('researchButton').addEventListener('click', function() {
+document.getElementById('researchButton').addEventListener('click', async function() {
   const button = this;
   const statusDiv = document.getElementById('status');
   const resultSection = document.getElementById('resultSection');
   const text = document.getElementById('selectedText').value.trim();
   
   if (text) {
-    console.log('Selected text for research:', text);
+    console.log('Textauswahl für Recherche:', text);
     
     // Show loading state
     button.disabled = true;
-    button.innerHTML = 'Researching... ⌛';
-    statusDiv.textContent = 'Research in progress...';
+    button.innerHTML = 'Recherchiere... ⌛';
+    statusDiv.textContent = 'Recherche läuft...';
     resultSection.style.display = 'none';
     
-    // Simulate processing with dummy content
-    setTimeout(() => {
-      const dummyContent = `Research Summary
+    const sourceUrl = 'https://example.com'; // Replace with the actual URL where the text was found
 
-Here is a summary of the analyzed text:
+    try {
+      const apiResponse = await researchTopic(text, sourceUrl);
+      const resultContent = apiResponse.choices[0].message.content || 'Keine Ergebnisse gefunden';
 
-- Key Point 1: This is an important finding from the text
-- Key Point 2: Another significant observation
-- Key Point 3: A final noteworthy point
+      // Split content into main content and sources
+      let mainContent = resultContent;
+      let sources = 'Keine Quellen verfügbar';
 
-This analysis provides a comprehensive overview of the selected content.`;
+      // Look for the "Quellen" section
+      const quellenIndex = resultContent.indexOf('\nQuellen');
+      if (quellenIndex !== -1) {
+        // Split the content at "Quellen"
+        mainContent = resultContent.substring(0, quellenIndex);
+        sources = resultContent.substring(quellenIndex + 1); // +1 to skip the newline
+      }
 
-      const dummySources = `Source 1: https://example.com/source1
-Source 2: https://example.com/source2`;
+      // Convert markdown to HTML for main content
+      const resultHtml = simpleMarkdownToHtml(mainContent);
 
-      // Display results as plain text
-      document.getElementById('researchResult').innerHTML = dummyContent;
-      document.getElementById('sources').value = dummySources;
+      // Display results
+      document.getElementById('researchResult').innerHTML = resultHtml;
+      document.getElementById('sources').value = sources;
       resultSection.style.display = 'block';
       
       // Update status
-      statusDiv.textContent = 'Research completed!';
-      button.innerHTML = 'Sent! ✅';
+      statusDiv.textContent = 'Recherche abgeschlossen!';
+      button.innerHTML = 'Gesendet! ✅';
       
       // Save results
-      saveResults(dummyContent, dummySources);
+      saveResults(mainContent, sources);
       
+    } catch (error) {
+      console.error('Fehler bei der Recherche:', error);
+      statusDiv.textContent = 'Fehler bei der Recherche.';
+    } finally {
       // Reset button after delay
       setTimeout(() => {
         button.disabled = false;
-        button.innerHTML = `Research <span class="button-icon">🔬</span>`;
-        statusDiv.textContent = `Last research: ${new Date().toLocaleString()}`;
+        button.innerHTML = `Recherchiere <span class="button-icon">🔬</span>`;
       }, 2000);
-    }, 0); // Simulate processing time
+    }
   } else {
-    statusDiv.textContent = 'Please enter some text to research';
+    statusDiv.textContent = 'Bitte geben Sie Text ein, um zu recherchieren';
     setTimeout(() => statusDiv.textContent = '', 2000);
   }
 });
@@ -108,12 +145,12 @@ document.getElementById('copyResult').addEventListener('click', function() {
   const resultText = document.getElementById('researchResult').textContent;
   navigator.clipboard.writeText(resultText).then(() => {
     const originalText = this.innerHTML;
-    this.innerHTML = 'Copied! ✅';
+    this.innerHTML = 'Kopiert! ✅';
     setTimeout(() => {
       this.innerHTML = originalText;
     }, 2000);
   }).catch(err => {
-    console.error('Failed to copy text:', err);
+    console.error('Fehler beim Kopieren des Textes:', err);
   });
 });
 
