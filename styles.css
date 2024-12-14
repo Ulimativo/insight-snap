@@ -244,9 +244,9 @@
     border-radius: 12px;
     font-size: 14px;
     line-height: 1.5;
-    overflow-y: auto;
-    white-space: normal;
-  }
+    overflow-y: auto; /* Enable vertical scrolling */
+    white-space: normal; /* Allow text to wrap */
+}
 
   .result-content h1,
   .result-content h2,
@@ -305,4 +305,50 @@
     background-color: var(--surface);
     border-radius: 6px;
     overflow-x: auto;
+  }
+
+  .sources-section {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 2px solid var(--border);
+  }
+
+  .sources-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+
+  .citation-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px;
+    background-color: var(--bg);
+    border-radius: 8px;
+  }
+
+  .citation-link {
+    display: inline-block;
+    padding: 4px 8px;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--primary);
+    text-decoration: none;
+    font-size: 13px;
+    transition: all 0.2s ease;
+  }
+
+  .citation-link:hover {
+    background-color: var(--primary);
+    color: white;
+    border-color: var(--primary);
+  }
+
+  .no-citations {
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-style: italic;
   }

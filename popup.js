@@ -91,30 +91,36 @@ document.getElementById('researchButton').addEventListener('click', async functi
     statusDiv.textContent = 'Recherche läuft...';
     resultSection.style.display = 'none';
     
-    const sourceUrl = 'https://example.com'; // Replace with the actual URL where the text was found
+    const sourceUrl = 'https://example.com'; // Replace with the actual URL
 
     try {
       const apiResponse = await researchTopic(text, sourceUrl);
       const resultContent = apiResponse.choices[0].message.content || 'Keine Ergebnisse gefunden';
+      
+      // Convert markdown to HTML for the entire content
+      const resultHtml = simpleMarkdownToHtml(resultContent);
 
-      // Split content into main content and sources
-      let mainContent = resultContent;
-      let sources = 'Keine Quellen verfügbar';
-
-      // Look for the "Quellen" section
-      const quellenIndex = resultContent.indexOf('\nQuellen');
-      if (quellenIndex !== -1) {
-        // Split the content at "Quellen"
-        mainContent = resultContent.substring(0, quellenIndex);
-        sources = resultContent.substring(quellenIndex + 1); // +1 to skip the newline
+      // Display main results
+      document.getElementById('researchResult').innerHTML = resultHtml;
+      
+      // Handle citations if they exist - accessing from root level of response
+      if (apiResponse.citations && apiResponse.citations.length > 0) {
+        const citationsHtml = apiResponse.citations
+          .map(citation => {
+            try {
+              const hostname = new URL(citation).hostname;
+              return `<a href="${citation}" target="_blank" class="citation-link">${hostname}</a>`;
+            } catch (error) {
+              console.error('Error parsing URL:', error);
+              return `<a href="${citation}" target="_blank" class="citation-link">${citation}</a>`;
+            }
+          })
+          .join('');
+        document.getElementById('citationLinks').innerHTML = citationsHtml;
+      } else {
+        document.getElementById('citationLinks').innerHTML = '<span class="no-citations">Keine Quellen verfügbar</span>';
       }
 
-      // Convert markdown to HTML for main content
-      const resultHtml = simpleMarkdownToHtml(mainContent);
-
-      // Display results
-      document.getElementById('researchResult').innerHTML = resultHtml;
-      document.getElementById('sources').value = sources;
       resultSection.style.display = 'block';
       
       // Update status
@@ -122,7 +128,7 @@ document.getElementById('researchButton').addEventListener('click', async functi
       button.innerHTML = 'Gesendet! ✅';
       
       // Save results
-      saveResults(mainContent, sources);
+      saveResults(resultContent, '');
       
     } catch (error) {
       console.error('Fehler bei der Recherche:', error);

@@ -11,7 +11,7 @@ async function researchTopic(userText, sourceUrl) {
   const messages = [
     {
       role: "system",
-      content: "You are an expert in research and summarizing content. You provide on point analysis on a given topic. Furthermore you provide an analysis on the topic as the last point of your response in a precise but lightweight way. You research for other media coverage on the topic and deliver all the news sources within your answer in a separate section called 'Sources'."
+      content: "You are an expert in research and summarizing content. You will be given a text string and a URL. You will research for other media coverage on the topic to include in your answer. You will provide a summary of the topic and the sources you found."
     },
     {
       role: "user",
@@ -31,7 +31,7 @@ async function researchTopic(userText, sourceUrl) {
       body: JSON.stringify({
         model: "llama-3.1-sonar-small-128k-online", // Specify the model you want to use
         messages: messages,
-        max_tokens: 500, // Adjust as needed
+        max_tokens: 2000, // Adjust as needed
         temperature: 0.7, // Adjust for randomness
       }),
     });
