@@ -1,6 +1,6 @@
 const config = {
   development: {
-    backendUrl: 'http://is-api.raabcloud.eu/api'
+    backendUrl: 'https://is-api.raabcloud.eu/api'
   },
   production: {
     backendUrl: 'https://is-api.raabcloud.eu/api'

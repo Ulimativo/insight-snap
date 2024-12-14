@@ -1,6 +1,6 @@
 # InsightSnap
 
-![InsightSnap Logo](images/InsightSnap.png)
+![InsightSnap Logo](chrome-extension/images/InsightSnap.png)
 
 **"InsightSnap liefert sekundenschnelle, präzise Recherchen direkt im Browser – inklusive verifizierter Quellen, ohne den Workflow zu unterbrechen."**
 

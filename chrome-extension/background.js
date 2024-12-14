@@ -1,4 +1,4 @@
-const WEBHOOK_URL = "https://hook.eu2.make.com/1ri41tmg1eed18qs5vqp43wtxclfrx9t";
+const WEBHOOK_URL = "https://is-api.raabcloud.eu/api"; // Updated API URL
 
 // Create context menu item
 chrome.runtime.onInstalled.addListener(() => {

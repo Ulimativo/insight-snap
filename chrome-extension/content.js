@@ -1,16 +1,13 @@
-// Listen for messages from the background script
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log('Content script received message:', request);
-  
-  if (request.action === "getSelectedText") {
-    const selectedText = window.getSelection().toString().trim();
-    console.log('Selected text from content script:', selectedText);
-    sendResponse({ text: selectedText });
+// Listen for messages from the popup
+chrome.runtime.onMessage.addListener(
+  function(request, sender, sendResponse) {
+    if (request.action === "getSelectedText") {
+      const selectedText = window.getSelection().toString();
+      sendResponse({text: selectedText});
+    }
+    return true; // Will respond asynchronously
   }
-  
-  // Return true to indicate we will send a response asynchronously
-  return true;
-});
+);
 
 // Add listener for text selection
 document.addEventListener('mouseup', () => {

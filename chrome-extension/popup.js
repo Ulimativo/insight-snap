@@ -1,27 +1,102 @@
 import ApiService from './services/api.js';
 // No import for marked.js since it's included in popup.html
 
+// Wrap your initialization code in DOMContentLoaded
+document.addEventListener('DOMContentLoaded', function() {
+  // Initialize event listeners
+  initializeEventListeners();
+  // Load initial data
+  setSelectedText();
+  loadSavedResults();
+  
+  // Load research history
+  chrome.storage.local.get(['currentResearch', 'researchHistory'], function(data) {
+    if (data.currentResearch) {
+      loadResearch(data.currentResearch);
+    }
+    if (data.researchHistory) {
+      displayHistory(data.researchHistory);
+    }
+  });
+});
+
 // Get the selected text when popup opens
 function setSelectedText() {
+  const selectedTextElement = document.getElementById('selectedText');
+  if (!selectedTextElement) {
+    console.error('Selected text element not found');
+    return;
+  }
+
+  // First check for context menu selection
   chrome.storage.local.get(['contextMenuSelection'], function(result) {
     if (result.contextMenuSelection) {
-      document.getElementById('selectedText').value = result.contextMenuSelection;
+      selectedTextElement.value = result.contextMenuSelection;
       chrome.storage.local.remove('contextMenuSelection');
     } else {
+      // If no context menu selection, try getting the current selection
       chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-        chrome.tabs.sendMessage(tabs[0].id, {action: "getSelectedText"}, function(response) {
-          if (response && response.text) {
-            document.getElementById('selectedText').value = response.text;
+        if (!tabs || !tabs[0]) {
+          console.error('No active tab found');
+          return;
+        }
+        
+        // Send message to content script
+        chrome.tabs.sendMessage(
+          tabs[0].id, 
+          {action: "getSelectedText"}, 
+          function(response) {
+            if (chrome.runtime.lastError) {
+              console.log('Error getting selected text:', chrome.runtime.lastError);
+              return;
+            }
+            if (response && response.text) {
+              selectedTextElement.value = response.text;
+            }
           }
-        });
+        );
       });
     }
   });
 }
 
-// Call when popup opens
-setSelectedText();
-loadSavedResults();
+// Add new function to initialize event listeners
+function initializeEventListeners() {
+  // Research button
+  const researchButton = document.getElementById('researchButton');
+  if (researchButton) {
+    researchButton.removeEventListener('click', handleResearchClick);
+    researchButton.addEventListener('click', handleResearchClick);
+  }
+
+  // Copy result button
+  const copyButton = document.getElementById('copyResult');
+  if (copyButton) {
+    copyButton.removeEventListener('click', handleCopyClick);
+    copyButton.addEventListener('click', handleCopyClick);
+  }
+
+  // Clear results button
+  const clearButton = document.getElementById('clearResults');
+  if (clearButton) {
+    clearButton.removeEventListener('click', handleClearClick);
+    clearButton.addEventListener('click', handleClearClick);
+  }
+
+  // Download results button
+  const downloadButton = document.getElementById('downloadResults');
+  if (downloadButton) {
+    downloadButton.removeEventListener('click', handleDownloadClick);
+    downloadButton.addEventListener('click', handleDownloadClick);
+  }
+
+  // Download history button
+  const downloadHistoryButton = document.getElementById('downloadHistory');
+  if (downloadHistoryButton) {
+    downloadHistoryButton.removeEventListener('click', handleDownloadHistoryClick);
+    downloadHistoryButton.addEventListener('click', handleDownloadHistoryClick);
+  }
+}
 
 // Function to save results to storage
 function saveResults(result, sources) {
@@ -161,18 +236,6 @@ function loadResearch(research) {
   document.getElementById('resultSection').style.display = 'block';
   window.lastResearchResult = research.content;
 }
-
-// Load current research and history when popup opens
-document.addEventListener('DOMContentLoaded', function() {
-  chrome.storage.local.get(['currentResearch', 'researchHistory'], function(data) {
-    if (data.currentResearch) {
-      loadResearch(data.currentResearch);
-    }
-    if (data.researchHistory) {
-      displayHistory(data.researchHistory);
-    }
-  });
-});
 
 // Update the research button click handler
 document.getElementById('researchButton').addEventListener('click', async function() {
@@ -322,3 +385,54 @@ document.getElementById('downloadHistory').addEventListener('click', function() 
     }
   });
 }); 
+
+// Add these handler functions at the top level
+function handleResearchClick() {
+  // Move the research button click handler code here
+  // Copy the content from the existing click handler
+}
+
+function handleCopyClick() {
+  const resultText = document.getElementById('researchResult').textContent;
+  navigator.clipboard.writeText(resultText).then(() => {
+    const button = document.getElementById('copyResult');
+    const originalText = button.innerHTML;
+    button.innerHTML = 'Kopiert! ✅';
+    setTimeout(() => {
+      button.innerHTML = originalText;
+    }, 2000);
+  }).catch(err => {
+    console.error('Fehler beim Kopieren des Textes:', err);
+  });
+}
+
+function handleClearClick() {
+  chrome.storage.local.remove(['currentResearch', 'researchHistory'], function() {
+    document.getElementById('researchResult').innerHTML = '';
+    document.getElementById('citationLinks').innerHTML = '';
+    document.getElementById('historyList').innerHTML = '';
+    document.getElementById('resultSection').style.display = 'none';
+    document.getElementById('status').textContent = '';
+  });
+}
+
+function handleDownloadClick() {
+  if (window.lastResearchResult) {
+    const timestamp = new Date().toISOString().split('T')[0];
+    downloadResults(`InsightSnap_Recherche_${timestamp}.txt`, window.lastResearchResult);
+  } else {
+    alert('Keine Ergebnisse zum Speichern vorhanden.');
+  }
+}
+
+function handleDownloadHistoryClick() {
+  chrome.storage.local.get(['researchHistory'], function(data) {
+    if (data.researchHistory && data.researchHistory.length > 0) {
+      const formattedHistory = formatHistoryForDownload(data.researchHistory);
+      const timestamp = new Date().toISOString().split('T')[0];
+      downloadResults(`InsightSnap_Historie_${timestamp}.txt`, formattedHistory);
+    } else {
+      alert('Keine Recherchen in der Historie vorhanden.');
+    }
+  });
+}
